@@ -1,7 +1,8 @@
-#!/usr/bin/env python3
+#!./python/bin/python3
 
 import os
 import sys
+import csv
 
 sys.path.insert(0, './pybtex/')
 from pybtex.database import parse_file
@@ -94,7 +95,7 @@ def getEntryAbstractStr(entry):
     abstract = ""
     if 'abstract' in entry.fields:
         abstract = str(entry.rich_fields['abstract'])
-    return abstract
+    return abstract.replace("#PORCENTAGEE#", "%")
 
 
 #=============================================================
@@ -102,10 +103,13 @@ def run(folderPath, fileList, fileNameOut, logProcess):
     global mergedCont
 
     if logProcess:
-        fRemoved = open(os.path.join(folderPath, 'BibFilesMerge_removed.csv'),'w')
-        fRemoved.write("cause;source;key;doi;author;year;title;publish\n")
-        fFinal = open(os.path.join(folderPath, 'BibFilesMerge_final.csv'),'w')
-        fFinal.write("key;doi;author;year;title;publish;abstract\n")
+        fRemoved = open(os.path.join(folderPath, "BibFilesMerge_removed.csv"), mode = "w")
+        fRemoved_writer = csv.writer(fRemoved, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        fRemoved_writer.writerow(["cause", "source", "key", "doi", "author", "year", "title", "publish"])
+
+        fFinal = open(os.path.join(folderPath, "BibFilesMerge_final.csv"), mode = "w")
+        fFinal_writer = csv.writer(fFinal, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        fFinal_writer.writerow(["key", "doi", "author", "year", "title", "publish", "abstract"])
 
     fileNamePathOut = os.path.join(folderPath, fileNameOut)
 
@@ -137,19 +141,19 @@ def run(folderPath, fileList, fileNameOut, logProcess):
                 withoutAuthor = withoutAuthor + 1
                 if logProcess:
                     #cause;source;key;doi;author;year;title;publish
-                    fRemoved.write("{};{};{};{};{};{};{};{}\n".format("no author", bibFileName, entry.key, doi, author, year, title, publish))
+                    fRemoved_writer.writerow(["no author", bibFileName, entry.key, doi, author, year, title, publish])
                 
             elif not 'year' in entry.fields or not str(entry.rich_fields['year']) or int(str(entry.rich_fields['year']))==0:
                 withoutYear = withoutYear + 1
                 if logProcess:
                     #cause;source;key;doi;author;year;title;publish
-                    fRemoved.write("{};{};{};{};{};{};{};{}\n".format("no year", bibFileName, entry.key, doi, author, year, title, publish))
+                    fRemoved_writer.writerow(["no year", bibFileName, entry.key, doi, author, year, title, publish])
                 
             elif (not 'journal' in entry.fields ) and (not 'booktitle' in entry.fields ):
                 withoutJornal = withoutJornal + 1
                 if logProcess:
                     #cause;source;key;doi;author;year;title;publish
-                    fRemoved.write("{};{};{};{};{};{};{};{}\n".format("no journal", bibFileName, entry.key, doi, author, year, title, publish))
+                    fRemoved_writer.writerow(["no journal", bibFileName, entry.key, doi, author, year, title, publish])
 
             else:
                 key =  entry.key.lower()
@@ -196,14 +200,14 @@ def run(folderPath, fileList, fileNameOut, logProcess):
 
                     if logProcess:
                         #cause;source;key;doi;author;year;title;publish
-                        fRemoved.write("{};{};{};{};{};{};{};{}\n".format("duplicate of next", bibFileName, entry.key, doi, author, year, title, publish))
+                        fRemoved_writer.writerow(["duplicate of next", bibFileName, entry.key, doi, author, year, title, publish])
 
                         doi = getEntryDOIStr(oldEntry)
                         author = getEntryAuthorStr(oldEntry)
                         year = getEntryYearStr(oldEntry)
                         title = getEntryTitleStr(oldEntry)
                         publish = getEntryPublishStr(oldEntry)
-                        fRemoved.write("{};{};{};{};{};{};{};{}\n".format("duplicate of prev", oldEntry.fields['source'], oldEntry.key, doi, author, year, title, publish))
+                        fRemoved_writer.writerow(["duplicate of prev", oldEntry.fields['source'], oldEntry.key, doi, author, year, title, publish])
 
                     bibDataOut.entries[oldEntry.key] = mergeEntry(oldEntry, entry)
 
@@ -235,7 +239,7 @@ def run(folderPath, fileList, fileNameOut, logProcess):
             abstract = getEntryAbstractStr(entry)
 
             #key;doi;author;year;title;publish;abstract
-            fFinal.write("{};{};{};{};{};{};{}\n".format(entry.key, doi, author, year, title, publish, abstract))
+            fFinal_writer.writerow([entry.key, doi, author, year, title, publish, abstract])
 
         if not 'abstract' in entry.fields:
             withoutAbstract = withoutAbstract + 1
